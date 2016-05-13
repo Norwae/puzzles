@@ -20,7 +20,8 @@ class Tests extends FlatSpec with Matchers {
   it should "filter out negative values" in {
     val result = for {
       x <- Positive(3)
-    } yield x - 10
+      y <- Positive(-3)
+    } yield x
 
     result shouldBe ConstraintViolated
   }
