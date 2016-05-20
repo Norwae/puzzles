@@ -6,6 +6,6 @@ final class DIYCaseClass(val x: Int, val y: Int) /* Your code here */ {
   // Your code here
 }
 
-object DIYCaseClass extends /* Your code here */ {
+object DIYCaseClass /* Your code here */ {
   // Your code here
 }
