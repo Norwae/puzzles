@@ -3,6 +3,7 @@
 Puzzles
 * diy-case-class
 * for-comprehensible
+* perplexing-syntax
 
 Each of these has an associated spoiler branch with a working implementation.
 
