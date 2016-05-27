@@ -22,6 +22,13 @@ class AmazingSyntaxTest extends FlatSpec with Matchers {
     l.double shouldEqual Left(3838)
   }
 
+  it should "infer inplace operators" in {
+    var l = Left(10)
+    l += Left(30)
+
+    l shouldEqual Left(40)
+  }
+
   it should "allow mutator overrides" in {
     val as = AmazingSyntax("abc", Nil)
     as.name = "Wow"
