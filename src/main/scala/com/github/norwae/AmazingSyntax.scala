@@ -21,15 +21,3 @@ object Right {
     def double = Left(l.value * 2)
   }
 }
-
-object foo {
-  Left(187) <-: Right
-  val as = new AmazingSyntax("Abc", List("def"))
-  as(1) = "171"
-  val as(contents) = 172
-
-  import Right._
-  val foo: String :+: Int = ("foo", 18)
-
-  val nn = ~as
-}
