@@ -40,7 +40,7 @@ class EventualSpec extends FlatSpec with Matchers with Eventually with BasicAsyn
 }
 
 trait BasicAsyncBehaviours { self: FlatSpec with Matchers with Eventually =>
-  override implicit def patienceConfig = PatienceConfig(timeout = Span(5, Seconds))
+  override implicit def patienceConfig = PatienceConfig(timeout = Span(45, Seconds))
 
   def slowRandomUUID() = {
     Thread.sleep(250)
@@ -61,7 +61,7 @@ trait BasicAsyncBehaviours { self: FlatSpec with Matchers with Eventually =>
     }
 
     it should "take longer than its component operations" in {
-      val deadline = Deadline.now + 749.millis
+      val deadline = Deadline.now + 700.millis
       val first, second, third = Eventual(slowRandomInt())
       val combined = for {
         f <- first
@@ -121,6 +121,42 @@ trait BasicAsyncBehaviours { self: FlatSpec with Matchers with Eventually =>
 
       eventually {
         mapped.get.get should (be >= 100 and be <= 999)
+      }
+    }
+
+    it should "allow forking computations" in {
+      val ev1 = Eventual(slowRandomInt())
+      val ev2 = ev1.map(_ * 10)
+      val ev3 = ev1.map(_ + 10)
+
+      eventually {
+        ev2.get should contain oneOf(10, 20, 30, 40, 50, 60, 70, 80, 90)
+        ev3.get should contain oneOf(11, 12, 13, 14, 15, 16, 17, 18, 19)
+      }
+    }
+
+    it should "be resistant against many, interleaving computations (simple concurrency check)" in {
+      val basics = List.fill(100)(Eventual(slowRandomInt().toLong))
+      val pairs = basics map { eventual =>
+        val ev1 = eventual.flatMap { int =>
+          Eventual((int, int * 2))
+        }
+        val ev2 = eventual.map(-_)
+        eventual.onComplete(Thread.sleep)
+
+        ev2.flatMap(_ => ev1)
+      }
+
+      val tested = basics.zip(pairs).map { outerPair =>
+        val (single, tuple) = outerPair
+        for {
+          valuePair <- tuple
+          value <- single
+        } yield value == valuePair._1 && 2 * value == valuePair._2
+      }
+
+      eventually {
+        tested.forall(_.get.get)
       }
     }
   }

@@ -17,14 +17,14 @@ object Eventual {
     }
 
     private sealed trait ComputationState {
-      def doWithValue[B](f: A => Unit): Unit
+      def doWithValue(f: A => Unit): Unit
       def get: Option[A]
     }
 
     private case class Unresolved() extends ComputationState {
       val callbacks = mutable.ListBuffer.empty[A => Runnable]
 
-      override def doWithValue[B](f: (A) => Unit) = synchronized {
+      override def doWithValue(f: (A) => Unit) = synchronized {
         callbacks += { value: A => new RunnableAdapter(f, value)}
       }
 
@@ -36,12 +36,16 @@ object Eventual {
     }
 
     private case class Resolved(value: A) extends ComputationState {
-      override def doWithValue[B](f: (A) => Unit) = ex.execute(new RunnableAdapter(f, value))
+      override def doWithValue(f: (A) => Unit) = ex.execute(new RunnableAdapter(f, value))
 
       override def get = Some(value)
     }
 
-    @volatile private var state: ComputationState = Unresolved()
+    private var state: ComputationState = Unresolved()
+
+    private def doWithValue(f: A => Unit) = synchronized {
+      state.doWithValue(f)
+    }
 
     def resolve(value: A) = synchronized {
       state.asInstanceOf[Unresolved].fireCallbacks(value)
@@ -52,9 +56,9 @@ object Eventual {
 
     override def flatMap[B](f: (A) => Eventual[B])(implicit ex: Executor) = {
       val resultWrapper = new MutableEventual[B](ex)
-      state doWithValue { value =>
+      doWithValue { value =>
         val result = f(value)
-        result.asInstanceOf[MutableEventual[B]].state.doWithValue(resultWrapper.resolve)
+        result.asInstanceOf[MutableEventual[B]].doWithValue(resultWrapper.resolve)
       }
       resultWrapper
     }
