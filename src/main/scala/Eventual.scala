@@ -24,24 +24,18 @@ object Eventual {
     private case class Unresolved() extends ComputationState {
       val callbacks = mutable.ListBuffer.empty[A => Runnable]
 
-      override def doWithValue(f: (A) => Unit) = synchronized {
-        callbacks += { value: A => new RunnableAdapter(f, value)}
-      }
-
-      def fireCallbacks(value: A) = {
-        callbacks.foreach(functor => ex.execute(functor(value)))
-      }
-
+      override def doWithValue(f: (A) => Unit) = callbacks += { value: A => new RunnableAdapter(f, value)}
       override def get = None
+
+      def fireCallbacks(value: A) = callbacks.foreach(functor => ex.execute(functor(value)))
     }
 
     private case class Resolved(value: A) extends ComputationState {
       override def doWithValue(f: (A) => Unit) = ex.execute(new RunnableAdapter(f, value))
-
       override def get = Some(value)
     }
 
-    private var state: ComputationState = Unresolved()
+    @volatile private var state: ComputationState = Unresolved()
 
     private def doWithValue(f: A => Unit) = synchronized {
       state.doWithValue(f)
