@@ -21,11 +21,11 @@ class EventualSpec extends FlatSpec with Matchers with Eventually with BasicAsyn
   "true multi-threading" should behave like basicAsyncImplementation(pool)
 
   it should "be significantly faster than serial execution" in {
+    val deadline = Deadline.now + 500.millis
     implicit val ex = pool
     val first, second, third, fourth, fifth = Eventual(slowRandomInt())
     val sum = List(first, second, third, fourth, fifth).foldLeft(Eventual.of(0))((a, b) => a.flatMap(aVal => b.map(_ + aVal)))
 
-    val deadline = Deadline.now + 500.millis
     eventually {
       sum.get.get should (be >= 5 and be <= 45)
     }
